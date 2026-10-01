@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HTML Trace It</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#18212b}
+header{background:#17212b;color:#fff;padding:16px 22px}
+header h1{margin:0;font-size:24px}
+.task{background:#fff;padding:14px 22px;border-bottom:1px solid #d8dee5;display:flex;align-items:center;gap:18px}
+.tasktext{flex:1;font-size:27px}.tasktext strong{color:#2563eb;display:block;margin-bottom:5px}
+.tasktext small{display:block;color:#66717d;margin-top:8px}
+.targetbox{width:350px;height:185px;border:1px solid #aeb8c2;border-radius:5px;background:#fff;overflow:hidden;flex-shrink:0;box-shadow:0 1px 3px #0001}
+.targetbox iframe{width:700px;height:370px;border:0;transform:scale(.5);transform-origin:top left}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px;min-height:455px}
+.panel{background:#fff;border:1px solid #d8dee5;border-radius:8px;overflow:hidden;display:flex;flex-direction:column}
+.panel h2{font-size:15px;margin:0;padding:11px 14px;border-bottom:1px solid #d8dee5}
+textarea{flex:1;min-height:315px;width:100%;resize:none;border:0;padding:16px;font:15px/1.5 Consolas,monospace;outline:0;background:#101820;color:#eee;tab-size:2}
+.preview{flex:1;min-height:315px;width:100%;border:0;background:#fff}
+.toolbar{display:flex;gap:8px;padding:9px;border-top:1px solid #d8dee5}
+button{border:0;border-radius:6px;padding:9px 14px;font-weight:600;cursor:pointer}
+.run{background:#2563eb;color:#fff}.reset{background:#e5e7eb}.check{background:#16a34a;color:#fff;margin-left:auto}
+.feedback{padding:10px 14px;border-top:1px solid #d8dee5;min-height:42px}.good{color:#15803d}.bad{color:#b91c1c}.muted{color:#66717d}
+.reveal-wrap{border-top:1px solid #d8dee5;background:#f8fafc;padding:9px}
+.reveal{width:100%;background:#6b7280;color:#fff}
+.reveal:active{background:#4b5563}
+.target-reveal{width:350px;margin-top:7px;background:#6b7280;color:#fff}
+.target-reveal:active{background:#4b5563}
+.target-code{display:none;width:350px;max-height:150px;overflow:auto;margin:7px 0 0;padding:9px;background:#101820;color:#dbe7f0;border-radius:5px;font:11px/1.4 Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+.revealed-code{display:none;margin:8px 0 0;padding:12px;max-height:190px;overflow:auto;background:#101820;color:#dbe7f0;border-radius:5px;font:13px/1.45 Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+@media(max-width:800px){.task{align-items:flex-start}.tasktext{font-size:20px}.targetbox{width:220px;height:120px}.targetbox iframe{transform:scale(.46)}.layout{grid-template-columns:1fr;padding:14px}}
+</style>
+</head>
+<body>
+<header><h1>HTML Trace It</h1></header>
+
+<div class="task">
+  <div class="tasktext">
+    <strong id="num">Task 1 of 20</strong>
+    <div id="task"></div>
+    <small>Recreate the target using HTML. The small window is the target appearance — no starter code is provided.</small>
+  </div>
+  <div>
+  <div class="targetbox"><iframe id="target" sandbox></iframe></div>
+  <button id="targetRevealBtn" class="target-reveal" type="button">Hold to reveal target HTML</button>
+  <pre id="targetCode" class="target-code"></pre>
+</div>
+</div>
+
+<div class="layout">
+<section class="panel">
+  <h2>Your HTML</h2>
+  <textarea id="editor" spellcheck="false" placeholder="Type your HTML here..."></textarea>
+  <div class="toolbar">
+    <button class="run" onclick="run()">Run HTML</button>
+    <button class="reset" onclick="resetCode()">Reset</button>
+    <button class="check" onclick="check()">Check</button>
+  </div>
+  <div id="feedback" class="feedback muted">Type your HTML and click Run HTML to see the result.</div>
+</section>
+
+<section class="panel">
+  <h2>Live result</h2>
+  <iframe id="preview" class="preview" sandbox="allow-scripts"></iframe>
+  <div class="reveal-wrap">
+    <button id="revealBtn" class="reveal" type="button">Hold to reveal HTML</button>
+    <pre id="revealedCode" class="revealed-code"></pre>
+  </div>
+</section>
+</div>
+
+<script>
+/*
+  Target examples are themselves HTML documents.
+  The student's result is checked by inspecting the rendered DOM in
+  the preview iframe rather than requiring an exact source-code string.
+*/
+
+const tasks = [
+  {
+    q:"Create a level 1 heading containing the text “My First Web Page”.",
+    target:"<h1>My First Web Page</h1>",
+    check:d=>!!d.querySelector("h1") && d.querySelector("h1").textContent.trim()==="My First Web Page"
+  },
+  {
+    q:"Create a paragraph containing the sentence shown.",
+    target:"<p>HTML is used to structure web pages.</p>",
+    check:d=>!!d.querySelector("p") && d.querySelector("p").textContent.trim()==="HTML is used to structure web pages."
+  },
+  {
+    q:"Create an unordered list containing HTML, CSS and JavaScript.",
+    target:"<ul><li>HTML</li><li>CSS</li><li>JavaScript</li></ul>",
+    check:d=>{let x=d.querySelector("ul");return !!x&&[...x.children].filter(e=>e.tagName==="LI").map(e=>e.textContent.trim()).join("|")==="HTML|CSS|JavaScript"}
+  },
+  {
+    q:"Create a link with the text “Visit Google” that links to Google.",
+    target:'<a href="https://www.google.com">Visit Google</a>',
+    check:d=>{let a=d.querySelector("a");return !!a&&a.textContent.trim()==="Visit Google"&&a.href==="https://www.google.com/"}
+  },
+  {
+    q:"Create an image using photo.jpg and give it alternative text “A photo”.",
+    target:'<img src="photo.jpg" alt="A photo" style="width:180px;height:80px;border:1px solid #888">',
+    check:d=>{let x=d.querySelector("img");return !!x&&x.getAttribute("src")==="photo.jpg"&&x.getAttribute("alt")==="A photo"}
+  },
+  {
+    q:"Create a table with the headings Name and Age and one row containing Alex and 14.",
+    target:'<table border="1" cellpadding="8"><tr><th>Name</th><th>Age</th></tr><tr><td>Alex</td><td>14</td></tr></table>',
+    check:d=>{let t=d.querySelector("table");if(!t)return false;let h=[...t.querySelectorAll("th")].map(x=>x.textContent.trim()),r=[...t.querySelectorAll("tr")][1];return h.join("|")==="Name|Age"&&r&&[...r.querySelectorAll("td")].map(x=>x.textContent.trim()).join("|")==="Alex|14"}
+  },
+  {
+    q:"Create a form containing a text input with the placeholder “Enter your name”.",
+    target:'<form><input type="text" placeholder="Enter your name"></form>',
+    check:d=>{let x=d.querySelector("input");return !!x&&x.type==="text"&&x.placeholder==="Enter your name"}
+  },
+  {
+    q:"Create a level 2 heading saying “About Me” followed by a paragraph.",
+    target:"<h2>About Me</h2><p>I am learning HTML.</p>",
+    check:d=>!!d.querySelector("h2")&&d.querySelector("h2").textContent.trim()==="About Me"&&!!d.querySelector("p")
+  },
+  {
+    q:"Make the word “Important” bold using a semantic HTML element.",
+    target:"<strong>Important</strong>",
+    check:d=>{let x=d.querySelector("strong");return !!x&&x.textContent.trim()==="Important"}
+  },
+  {
+    q:"Create an ordered list containing Python, JavaScript and HTML.",
+    target:"<ol><li>Python</li><li>JavaScript</li><li>HTML</li></ol>",
+    check:d=>{let x=d.querySelector("ol");return !!x&&[...x.children].filter(e=>e.tagName==="LI").map(e=>e.textContent.trim()).join("|")==="Python|JavaScript|HTML"}
+  },
+  {
+    q:"Create a section containing an h2 heading “Computing” and a paragraph.",
+    target:"<section><h2>Computing</h2><p>I enjoy programming.</p></section>",
+    check:d=>{let s=d.querySelector("section");return !!s&&!!s.querySelector("h2")&&s.querySelector("h2").textContent.trim()==="Computing"&&!!s.querySelector("p")}
+  },
+  {
+    q:"Create a navigation area containing links labelled Home and Contact.",
+    target:'<nav><a href="#">Home</a> <a href="#">Contact</a></nav>',
+    check:d=>{let n=d.querySelector("nav");return !!n&&[...n.querySelectorAll("a")].map(x=>x.textContent.trim()).join("|")==="Home|Contact"}
+  },
+  {
+    q:"Create a video element with controls and a width of 400 pixels.",
+    target:'<video controls width="400"></video>',
+    check:d=>{let v=d.querySelector("video");return !!v&&v.controls&&v.width===400}
+  },
+  {
+    q:"Create an email input and make it required.",
+    target:'<input type="email" required placeholder="Email address">',
+    check:d=>{let x=d.querySelector("input");return !!x&&x.type==="email"&&x.required}
+  },
+  {
+    q:"Create a button whose visible text is “Submit”.",
+    target:"<button>Submit</button>",
+    check:d=>!!d.querySelector("button")&&d.querySelector("button").textContent.trim()==="Submit"
+  },
+  {
+    q:"Create a definition list containing the term HTML and the definition HyperText Markup Language.",
+    target:"<dl><dt>HTML</dt><dd>HyperText Markup Language</dd></dl>",
+    check:d=>{let x=d.querySelector("dl");return !!x&&x.querySelector("dt")?.textContent.trim()==="HTML"&&x.querySelector("dd")?.textContent.trim()==="HyperText Markup Language"}
+  },
+  {
+    q:"Create a main element containing a level 1 heading “Computer Science” and a paragraph.",
+    target:"<main><h1>Computer Science</h1><p>Learning HTML.</p></main>",
+    check:d=>{let m=d.querySelector("main");return !!m&&m.querySelector("h1")?.textContent.trim()==="Computer Science"&&!!m.querySelector("p")}
+  },
+  {
+    q:"Create a figure containing an image and a figcaption saying “My diagram”.",
+    target:'<figure><img src="diagram.png" alt="Diagram" style="width:170px;height:70px"><figcaption>My diagram</figcaption></figure>',
+    check:d=>{let f=d.querySelector("figure");return !!f&&!!f.querySelector("img")&&f.querySelector("img").alt==="Diagram"&&f.querySelector("figcaption")?.textContent.trim()==="My diagram"}
+  },
+  {
+    q:"Create an article with the heading “My Article” followed by two paragraphs.",
+    target:"<article><h2>My Article</h2><p>First paragraph.</p><p>Second paragraph.</p></article>",
+    check:d=>{let a=d.querySelector("article");return !!a&&a.querySelector("h2")?.textContent.trim()==="My Article"&&a.querySelectorAll("p").length===2}
+  },
+  {
+    q:"Final challenge: recreate the nested structure shown: a main element containing a section, an h2 heading, an unordered list of three items and a link.",
+    target:'<main><section><h2>Web Development</h2><ul><li>HTML</li><li>CSS</li><li>JavaScript</li></ul><a href="#">Learn more</a></section></main>',
+    check:d=>{let m=d.querySelector("main"),s=m?.querySelector("section");return !!s&&s.querySelector("h2")?.textContent.trim()==="Web Development"&&s.querySelectorAll(":scope > ul > li").length===3&&!!s.querySelector(":scope > a")}
+  }
+];
+
+let n=0;
+const editor=document.getElementById("editor");
+const preview=document.getElementById("preview");
+const target=document.getElementById("target");
+const feedback=document.getElementById("feedback");
+const revealBtn=document.getElementById("revealBtn");
+const revealedCode=document.getElementById("revealedCode");
+const targetRevealBtn=document.getElementById("targetRevealBtn");
+const targetCode=document.getElementById("targetCode");
+
+function load(){
+  document.getElementById("num").textContent=`Task ${n+1} of ${tasks.length}`;
+  document.getElementById("task").textContent=tasks[n].q;
+  editor.value="";
+  target.srcdoc=tasks[n].target;
+  feedback.className="feedback muted";
+  feedback.textContent="Type your HTML and click Run HTML to see the result.";
+  revealedCode.style.display="none";
+  revealedCode.textContent="";
+  revealBtn.textContent="Hold to reveal HTML";
+  targetCode.style.display="none";
+  targetCode.textContent="";
+  targetRevealBtn.textContent="Hold to reveal target HTML";
+  run();
+}
+function run(){
+  preview.srcdoc = editor.value;
+  feedback.className="feedback muted";
+  feedback.textContent="Live preview updated.";
+}
+function resetCode(){editor.value="";run()}
+function check(){
+  const code = editor.value.trim();
+
+  if(!code){
+    feedback.className="feedback bad";
+    feedback.textContent="✗ Enter some HTML first.";
+    return;
+  }
+
+  feedback.className="feedback muted";
+  feedback.textContent="Checking...";
+
+  try{
+    // Parse the student's HTML directly. This avoids iframe sandbox/origin
+    // restrictions while still checking the actual DOM structure.
+    const parsed = new DOMParser().parseFromString(code, "text/html");
+    const correct = tasks[n].check(parsed);
+
+    if(correct){
+      feedback.className="feedback good";
+      feedback.textContent="✓ Correct.";
+      if(n < tasks.length-1){
+        setTimeout(()=>{n++;load()},650);
+      }else{
+        feedback.textContent="✓ All 20 tasks completed!";
+      }
+    }else{
+      feedback.className="feedback bad";
+      feedback.textContent="✗ Not quite. Compare your live result with the target.";
+    }
+  }catch(e){
+    feedback.className="feedback bad";
+    feedback.textContent="✗ Your HTML could not be checked. Try again.";
+  }
+}
+let revealTimer=null;
+function showAnswer(){
+  revealedCode.textContent=editor.value || "(No HTML entered yet.)";
+  revealedCode.style.display="block";
+  revealBtn.textContent="Release to hide HTML";
+}
+function hideAnswer(){
+  revealedCode.style.display="none";
+  revealedCode.textContent="";
+  revealBtn.textContent="Hold to reveal HTML";
+  targetCode.style.display="none";
+  targetCode.textContent="";
+  targetRevealBtn.textContent="Hold to reveal target HTML";
+}
+revealBtn.addEventListener("pointerdown",e=>{e.preventDefault();showAnswer()});
+revealBtn.addEventListener("pointerup",hideAnswer);
+revealBtn.addEventListener("pointercancel",hideAnswer);
+revealBtn.addEventListener("pointerleave",e=>{if(e.buttons===0)hideAnswer()});
+revealBtn.addEventListener("contextmenu",e=>e.preventDefault());
+
+function showTargetAnswer(){
+  targetCode.textContent=tasks[n].target;
+  targetCode.style.display="block";
+  targetRevealBtn.textContent="Release to hide target HTML";
+}
+function hideTargetAnswer(){
+  targetCode.style.display="none";
+  targetCode.textContent="";
+  targetRevealBtn.textContent="Hold to reveal target HTML";
+}
+targetRevealBtn.addEventListener("pointerdown",e=>{e.preventDefault();showTargetAnswer()});
+targetRevealBtn.addEventListener("pointerup",hideTargetAnswer);
+targetRevealBtn.addEventListener("pointercancel",hideTargetAnswer);
+targetRevealBtn.addEventListener("pointerleave",e=>{if(e.buttons===0)hideTargetAnswer()});
+targetRevealBtn.addEventListener("contextmenu",e=>e.preventDefault());
+
+load();
+</script>
+</body>
+</html>
